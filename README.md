@@ -12,7 +12,7 @@
 typeracer-readme generates typeracer graph for profile readme
 
 <a href="">
-  <img src="https://raw.githubusercontent.com/jackvector634/Type_racer/Type_racer/dark_graph.png" alt="typeracer graph" height="260"/>
+  <img src="https://raw.githubusercontent.com/jackvector634/Type_racer/typeracer-readme/dark_graph.png" alt="typeracer graph" height="260"/>
 </a>
 
 
