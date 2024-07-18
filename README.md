@@ -1,4 +1,4 @@
 # github_activity
 ## My GitHub Activity
 
-![GitHub Activity Graph](https://raw.githubusercontent.com/jackvector634/github_activity/main/activity_graph.png)
+![Type racer graph](https://raw.githubusercontent.com/jackvector634/Type_racer/main/dark_graph.png)
