@@ -4,7 +4,7 @@ import datetime
 from collections import defaultdict
 
 # Replace with your GitHub username
-username = "jackvector634"
+username = "4rivappa"
 
 # Define the date range for fetching data
 start_date = "2023-01-01"  # Start date for fetching data
