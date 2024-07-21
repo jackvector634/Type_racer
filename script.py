@@ -1,118 +1,79 @@
-import datetime
-import json
-import os
-import numpy as np
 import requests
 import matplotlib.pyplot as plt
+import datetime
+from collections import defaultdict
 
-username = "leave_me_here"
-start_date = "2021-03-23"
-custom_dpi = 300
+# Replace with your GitHub username
+username = "jackvector634"
 
-def date_to_js_timestamp(date_str):
-    date = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
-    return (date - datetime.date(1970, 1, 1)).total_seconds()
+# Define the date range for fetching data
+start_date = "2023-01-01"  # Start date for fetching data
+end_date = str(datetime.date.today())  # End date for fetching data (today's date)
 
-def js_timestamp_to_date(timestamp):
-    return datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d')
-
-def generate_data(username, start_date_input):
-    today = datetime.datetime.today()
-    tomorrow = today + datetime.timedelta(days=1)
-    tomorrow_date = tomorrow.strftime("%Y-%m-%d")
-
-    end_date = int(date_to_js_timestamp(tomorrow_date))
-    start_date = int(date_to_js_timestamp(start_date_input))
-    print("start date:", js_timestamp_to_date(start_date))
-
-    base_url = "https://data.typeracer.com/games?playerId=tr:" + username + "&universe=play&startDate="
-
-    data = []
-    while True:
-        print("trying to fetch 1000 race events backwards from", js_timestamp_to_date(end_date), "...")
-        url = base_url + str(start_date) + "&endDate=" + str(end_date)
-        response = requests.get(url)
-        if response.status_code == 200:
-            curr_data = response.json()
-            data.extend(curr_data)
-            if curr_data[-1]["gn"] == 1:
-                print("completed successfully")
-                break
-            end_date = int(curr_data[-1]["t"])
+# Function to fetch GitHub activity data with pagination handling
+def fetch_github_activity(username):
+    # Base URL for fetching user events from GitHub API
+    url = f"https://api.github.com/users/{username}/events"
+    
+    # Headers to set the user-agent
+    headers = {
+        'User-Agent': 'request'
+    }
+    
+    # Initialize the list to store all events
+    all_events = []
+    
+    # Loop to handle pagination
+    while url:
+        # Make the GET request to the GitHub API
+        response = requests.get(url, headers=headers)
+        
+        # Check if the request was successful
+        if response.status_code != 200:
+            raise Exception(f"Error fetching data: {response.status_code}")
+        
+        # Extend the list with the new events
+        all_events.extend(response.json())
+        
+        # Check if there is a 'Link' header for pagination
+        links = response.headers.get('Link')
+        if links:
+            # Extract the next page URL from the 'Link' header
+            next_url = None
+            for link in links.split(','):
+                if 'rel="next"' in link:
+                    next_url = link.split(';')[0].strip('<> ')
+                    break
+            url = next_url
         else:
             break
-    if not os.path.exists('exports'):
-        os.makedirs('exports')
-    with open('./exports/data.json', 'w') as file:
-        json.dump(data, file, indent=4)
-    return data
-
-def main():
-    ## function calling with user_name and start_date for results
-    data = generate_data(username, start_date)
-
-    print("total no of races:", len(data))
-
-    data = data[::-1]
-
-    # Plot the data
-
-    x = np.array([d['gn'] for d in data])
-    y = np.array([d['wpm'] for d in data])
-
-    # Calculate the average window size
-    if len(x) > 10000:
-        average_window = len(x) // 200 + 1
-    elif 5000 < len(x) <= 10000:
-        average_window = len(x) // 100 + 1
-    elif 1000 < len(x) < 5000:
-        average_window = len(x) // 80 + 1
-    elif 100 < len(x) < 1000:
-        average_window = len(x) // 50 + 1
-    elif len(x) < 100:
-        average_window = len(x) // 10 + 1
-
-    # print(average_window)
-
-    # Calculate the number of averages
-    num_averages = len(x) // average_window
-
-    # Truncate the arrays to ensure they are divisible by 10
-    x_truncated = x[:num_averages*average_window]
-    y_truncated = y[:num_averages*average_window]
-
-    # Reshape the arrays to average every 10 values
-    x_averages = x_truncated.reshape(num_averages, average_window).mean(axis=1)
-    y_averages = y_truncated.reshape(num_averages, average_window).mean(axis=1)
-
-    if len(x_truncated) < len(x):
-        x_remaining = x[num_averages*average_window:]
-        y_remaining = y[num_averages*average_window:]
-
-        x_averages = np.append(x_averages, x_remaining.mean())
-        y_averages = np.append(y_averages, y_remaining.mean())
     
-    plt.figure(figsize=(4, 2), dpi=custom_dpi)
-    
-    plt.plot(x_averages, y_averages)
-    plt.xlabel("race number")
-    plt.ylabel("wpm")
-    # plt.title("Typeracer WPM over time")
-    
-    if not os.path.exists('exports'):
-        os.makedirs('exports')
+    return all_events
 
-    plt.savefig('./exports/light_graph.png', dpi=custom_dpi, bbox_inches='tight')
+# Fetch the data using the function
+activity_data = fetch_github_activity(username)
 
-    plt.clf()
-    plt.style.use('dark_background')
-    plt.plot(x_averages, y_averages)
-    plt.xlabel("race number")
-    plt.ylabel("wpm")
-    # plt.title("Typeracer WPM over time")
+# Process the data to extract and aggregate relevant information
+activity_counts = defaultdict(int)
 
-    plt.savefig('./exports/dark_graph.png', dpi=custom_dpi, bbox_inches='tight')
-    return
+for event in activity_data:
+    # Extract the date from the event timestamp (first 10 characters of 'created_at')
+    date = event['created_at'][:10]
+    # Increment the activity count for the date
+    activity_counts[date] += 1
 
-if __name__ == "__main__":
-    main()
+# Sort the dates and counts
+sorted_dates = sorted(activity_counts.keys())
+sorted_counts = [activity_counts[date] for date in sorted_dates]
+
+# Plot the graph using matplotlib
+plt.figure(figsize=(10, 5))  # Create a new figure with specified size
+plt.plot(sorted_dates, sorted_counts, marker='o')  # Plot the data with dates on x-axis and counts on y-axis
+plt.title('GitHub Activity Over Time')  # Set the title of the graph
+plt.xlabel('Date')  # Label the x-axis
+plt.ylabel('Activity Count')  # Label the y-axis
+plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
+plt.tight_layout()  # Adjust layout to fit elements properly
+plt.savefig('activity_graph.png')  # Save the graph as an image file
+
+print("Graph generated and saved as activity_graph.png")  # Print confirmation message
