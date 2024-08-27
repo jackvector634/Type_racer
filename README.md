@@ -42,6 +42,7 @@ typeracer-readme generates typeracer graph for profile readme
 
 We retrieve typing race data in JSON format from Typeracer, with details like race number, WPM, timestamp, and accuracy. Here's an example of the data:
 
+```json
 [
     {
         "gn": 1,
